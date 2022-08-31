@@ -1,0 +1,14 @@
+{
+    "location":{
+        "extension":".nii",
+        "input_file":["/home/saumya/aorta-segmentation/data/GT_saumya/correctedLabel/SBU004_C_TP2_5.4_GT_correctedLabel.nii"],
+        "input_folder":[],
+        "output_folder":"/home/saumya/aorta-segmentation/preprocess-data-code/"
+    },
+    "apply":{
+        "change_labels":[],
+        "add_minimum_label_thickness": [[1,2,1,1,1]],
+        "fill_holes": [],
+        "remove_branch":[]
+    }
+}

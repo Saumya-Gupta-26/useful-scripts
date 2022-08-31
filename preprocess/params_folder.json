@@ -1,0 +1,14 @@
+{
+    "location":{
+        "extension":".nii",
+        "input_file":[],
+        "input_folder":["/home/saumya/aorta-segmentation/data/GT_saumya/correctedLabel/"],
+        "output_folder":"/home/saumya/aorta-segmentation/data/GT_saumya/correctedLabel/GT_main_branch_wallBoundary/"
+    },
+    "apply":{
+        "change_labels":[],
+        "add_minimum_label_thickness": [[1,2,1,1,1]],
+        "fill_holes": [],
+        "remove_branch":[1]
+    }
+}
