@@ -1,0 +1,555 @@
+from website's FAQ : https://www.ub.edu/mnms/ 
+
+
+Q: What type of images will I get access to?
+
+A: The images provided are four dimensional short-axis cardiac MRI studies with coordinates (x,y,z,t) in order, t being time. Additionaly, annotations are provided for 150 studies for only two cardiac time frames, end-diastole (ED) and end-systole (ES). This information is provided along with images in an Excel file.
+
+
+Q: Am I suppose to segment all time frames in the test set?
+
+A: No. Only the end-diastole (ED) and end-systole (ES) phases. 
+
+=================================================
+
+Environment setup commands:
+
+conda activate nnunet-mnm
+
+export nnUNet_raw_data_base="/data/xiaolhu/nnunet-data-chkpts/nnUNet_raw_data_base"
+export nnUNet_preprocessed="/data/xiaolhu/nnunet-data-chkpts/nnUNet_preprocessed"
+export RESULTS_FOLDER="/data/xiaolhu/nnunet-data-chkpts/nnUNet_results"
+CUDA_VISIBLE_DEVICES=<gpu-num> nnUNet_plan_and_preprocess -t 600 --verify_dataset_integrity
+
+Train command (3D):
+CUDA_VISIBLE_DEVICES=<gpu-num> nnUNet_train 3d_fullres nnUNetTrainerV2 Task600_MITOCH <fold-num> --npz
+
+Train command (2D):
+CUDA_VISIBLE_DEVICES=<gpu-num> nnUNet_train 2d nnUNetTrainerV2 Task600_MITOCH <fold-num> --npz
+
+Inference command:
+CUDA_VISIBLE_DEVICES=<gpu-num> nnUNet_predict -i <input-path> -o <output-path> -t Task600_MITOCH -tr nnUNetTrainerV2 -m 3d_fullres -f <fold-num> -chk model_best
+
+If you want to save the likelihoodmap map during inference, use the --save_npz flag
+CUDA_VISIBLE_DEVICES=<gpu-num> nnUNet_predict --save_npz -i <input-path> -o <output-path> -t Task600_MITOCH -tr nnUNetTrainerV2 -m 2d -f <fold-num> -chk model_best
+
+
+================ 
+Task101_VESSEL
+
+conda activate nnunet-mnm
+export nnUNet_raw_data_base="/data/saumgupta/slicer-tool/datasets/vessel-data/nnunet/nnUNet_raw_data_base"
+export nnUNet_preprocessed="/data/saumgupta/slicer-tool/datasets/vessel-data/nnunet/nnUNet_preprocessed"
+export RESULTS_FOLDER="/data/saumgupta/slicer-tool/datasets/vessel-data/nnunet/nnUNet_results"
+
+CUDA_VISIBLE_DEVICES=0 nnUNet_plan_and_preprocess -t 101 --verify_dataset_integrity
+
+CUDA_VISIBLE_DEVICES=0 nnUNet_train 3d_fullres nnUNetTrainerV2 Task101_VESSEL 0 --npz
+CUDA_VISIBLE_DEVICES=1 nnUNet_train 3d_fullres nnUNetTrainerV2 Task101_VESSEL 1 --npz
+CUDA_VISIBLE_DEVICES=2 nnUNet_train 3d_fullres nnUNetTrainerV2 Task101_VESSEL 2 --npz
+CUDA_VISIBLE_DEVICES=3 nnUNet_train 3d_fullres nnUNetTrainerV2 Task101_VESSEL 3 --npz
+CUDA_VISIBLE_DEVICES=4 nnUNet_train 3d_fullres nnUNetTrainerV2 Task101_VESSEL 4 --npz
+
+CUDA_VISIBLE_DEVICES=5 nnUNet_predict -i '/data/saumgupta/slicer-tool/datasets/vessel-data/outputs/nnunet/fold' -o '/data/saumgupta/slicer-tool/datasets/vessel-data/outputs/nnunet/' -t Task101_VESSEL -tr nnUNetTrainerV2 -m 3d_fullres -f 0 -chk model_best
+
+CUDA_VISIBLE_DEVICES=7 nnUNet_predict -i '/data/saumgupta/slicer-tool/datasets/ImmunoCTs/input/set2' -o '/data/saumgupta/slicer-tool/datasets/ImmunoCTs/output/fold_4' -t Task101_VESSEL -tr nnUNetTrainerV2 -m 3d_fullres -f 4 -chk model_best
+
+================== rebuttal experiments
+
+IVUS (Containment)
+01) 2D FCN + Topo--------------------------new topox tmux (ivus-crf-fold0)
+/scr/saumgupta/ivus/simple-unet-fcn
+test volumes generated
+
+02) 2D Unet + Topo-------------------------new topox tmux (ivus-crf-fold1)
+/scr/saumgupta/ivus/simple-unet-fcn
+test volumes generated
+
+03) 2D nnUNet + MIDL --- rerun topocrfonlysmooth ------old topox server
+/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet
+4 folds (tmux cv1,cv2,cv3,cv4)
+test volumes generated
+
+04) 2D nnUNet + Topo (4-conn) ----------------old topox server (tmux cv11, cv12)
+2 folds
+/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet
+test volumes generated
+
+05) 2D nnUNet + Ganaye -----------------new topox tmux (ivus1, ivus2, ivus3, ivus4)
+4 folds
+/scr/saumgupta/ivus/nnunet
+test volumes generated : /scr/saumgupta/ivus/nnunet/test-data/outputs/2d/nonadj
+
+Multi-Atlas (Exclusion)
+06) 2D FCN + Topo--------------------------new topox tmux (abd-2d-fcn)
+/scr/saumgupta/abdomen/simple-unet-and-fcn
+test volumes generated
+
+07.a) 3D Unet + Topo-----------------------new topox tmux (abd-3d-unet)
+07.b) 2D Unet + Topo-----------------------new topox tmux (abd-2d-unet)
+/scr/saumgupta/abdomen/simple-unet-and-fcn
+test volumes generated
+
+08) 3D nnUNet + MIDL --- rerun topocrf  ------old topox server
+/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/nnUNet_results/nnUNet/3d_fullres/Task900_ABDOMEN/nnUNetTrainerV2_3D_Nepochs_TopolossCRFonlySmooth__nnUNetPlansv2.1
+3 folds (tmux cv5, cv6, cv7)
+test volumes generated
+
+09) 3D nnUNet + Ganaye --------new topox server (tmux abd1, abd2, abd3)
+3 folds
+/scr/saumgupta/abdomen/nnunet/nnUNet_results/nnUNet/3d_fullres/Task900_ABDOMEN
+test volumes: /scr/saumgupta/abdomen/nnunet/test-data/outputs/nonadj
+
+10) 3D nnUNet + Topo(DICE)  ------old topox server (tmux cv8)
+/data/saumgupta/miccai/dataset/multi-organ/data/nnunet
+test volumes generated
+
+11) 3D nnUNet + Topo(MSE)  ------old topox server (tmux cv9)
+/data/saumgupta/miccai/dataset/multi-organ/data/nnunet
+test volumes generated
+
+12) 3D nnUNet + Topo(CE: 1.5e-6)  ------old topox server (tmux cv10)
+/data/saumgupta/miccai/dataset/multi-organ/data/nnunet
+test volumes generated
+
+13) 3D nnUNet + Topo(CE: 5.0e-7)  ------old topox server (tmux cv11)
+/data/saumgupta/miccai/dataset/multi-organ/data/nnunet
+test volumes generated
+
+
+======================= camera-ready --- numbers + images for main and supplementary. For some paths, see above.
+
+1) aorta - nonadj
+/scr/saumgupta/aorta/nnunet/nnUNet_results/nnUNet/3d_fullres/Task500_Aorta/nnUNetTrainerV2_3D_Nepochs_NonAdj__nnUNetPlansv2.1
+test volumes : /scr/saumgupta/aorta/outputs/nonadj
+
+2) aorta - midl ----- same as TopoCRF
+take from topocrf : /home/saumya/aorta-segmentation/baseline/nnunet/data/data-format-for-all/nnUNet_results/nnUNet/3d_fullres/Task500_Aorta/nnUNetTrainerV2_3D_Nepochs_TopolossCRFonlySmooth__nnUNetPlansv2.1
+test volumes at : /data/saumgupta/miccai/dataset/nnunet-aorta/outputs/crf-only-smooth
+
+3) aorta - fcn+ours
+/scr/saumgupta/aorta/simple-unet-and-fcn/fcn-topo
+test volumes : /scr/saumgupta/aorta/outputs/fcn+topo
+
+4) aorta - unet+ours
+/scr/saumgupta/aorta/simple-unet-and-fcn/unet-topo
+test volumes : /scr/saumgupta/aorta/outputs/unet+topo
+
+5) aorta - 6conn
+/home/saumya/aorta-segmentation/baseline/nnunet/data/data-format-for-all/nnUNet_results/nnUNet/3d_fullres/Task500_Aorta/nnUNetTrainerV2_3D_Nepochs_TopolossCE_6conn__nnUNetPlansv2.1
+test volumes : /data/saumgupta/miccai/dataset/nnunet-aorta/outputs/6conn
+
+6) [done] ivus - nonadj
+7) [done] ivus - midl
+8) [done] ivus - fcn+ours
+9) [done] ivus - unet+ours
+10) [done] ivus - 4conn
+
+11) [done] abdo - nonadj
+12) [done] abdo - midl ----- same as TopoCRF
+13) [done] abdo - fcn+ours
+14) [done] abdo - unet+ours
+
+15) abdo - 6conn : 
+/scr/saumgupta/abdomen/nnunet/nnUNet_results/nnUNet/3d_fullres/Task900_ABDOMEN/nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE_6conn__nnUNetPlansv2.1
+test volumes : /scr/saumgupta/abdomen/nnunet/test-data/outputs/6conn/
+
+16) segthor - nonadj (tmux abdo2,abdo3)
+/data/saumgupta/miccai/dataset/segthor/nnunet/nnUNet_results/nnUNet/3d_fullres/Task950_THOR/nnUNetTrainerV2_3D_Nepochs_NonAdj__nnUNetPlansv2.1
+test volumes : /data/saumgupta/miccai/dataset/segthor/nnunet/test-data/outputs/nonadj
+
+17) segthor - midl ----- same as TopoCRF
+take from topocrf : /data/saumgupta/miccai/dataset/segthor/nnunet/nnUNet_results/nnUNet/3d_fullres/Task950_THOR/nnUNetTrainerV2_3D_Nepochs_TopolossCRFonlySmooth__nnUNetPlansv2.1
+test volumes : /data/saumgupta/miccai/dataset/segthor/nnunet/test-data/outputs/3d-topocrf
+
+18) segthor - fcn+ours (from scratch)
+/scr/saumgupta/segthor/simple-unet-and-fcn/fcn-topo
+test volumes : /scr/saumgupta/segthor/test-data/outputs/fcn+topo
+
+19) segthor - unet+ours (from scratch)
+/scr/saumgupta/segthor/simple-unet-and-fcn/unet-topo
+test volumes : /scr/saumgupta/segthor/test-data/outputs/unet+topo
+
+20) segthor - 6conn
+/data/saumgupta/miccai/dataset/segthor/nnunet/nnUNet_results/nnUNet/3d_fullres/Task950_THOR/nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE_6conn__nnUNetPlansv2.1
+test volumes : /data/saumgupta/miccai/dataset/segthor/nnunet/test-data/outputs/6conn
+
+================== done/ongoing experiments:
+crowd-airways - 2d - fold0 
+
+crowd-airways - 2d - fold0 - topoce(0.0001) 
+
+crowd-airways - 2d - fold0 - topodice(0.0001)
+
+crowd-airways - 3d - fold0 
+
+ivus - 2d - fold0
+ivus - 2d - fold1
+ivus - 2d - fold2
+ivus - 2d - fold3
+ivus - 2d - fold4
+
+ivus - 2d - fold0 - topoce(0.0001)
+ivus - 2d - fold1 - topoce(0.0001)
+ivus - 2d - fold2 - topoce(0.0001)
+ivus - 2d - fold3 - topoce(0.0001)
+ivus - 2d - fold4 - topoce(0.0001)
+
+ivus - 2d - fold0 - topodice(0.0001)
+ivus - 2d - fold1 - topodice(0.0001)
+ivus - 2d - fold2 - topodice(0.0001)
+ivus - 2d - fold3 - topodice(0.0001)
+ivus - 2d - fold4 - topodice(0.0001)
+
+abdo - 2d -fold0
+abdo - 2d -fold1
+abdo - 2d -fold2
+abdo - 2d -fold0 - topoce(0.0001)
+abdo - 2d -fold1 - topoce(0.0001)
+abdo - 3d -fold0
+abdo - 3d -fold1
+abdo - 3d -fold2
+abdo - 3d -fold0 - topoce(0.000001)
+abdo - 3d -fold1 - topoce(0.000001)
+abdo - 3d -fold2 - topoce(0.000001)
+
+
+================== training notes / tmux commands
+tmux new -s <name>
+tmux attach -t <name>
+
+conda activate nnunet-mnm
+
+path to code: /home/saumya/aorta-segmentation/miccai/nnUNet/nnunet/
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_plan_and_preprocess -t 950 --verify_dataset_integrity
+
+cd /home/saumya/aorta-segmentation/miccai/grandchallenge-mnm/nnunet-logs
+
+export nnUNet_raw_data_base="/data/saumgupta/miccai/dataset/grandchallenge-mnm/OpenDataset/nnunet/nnUNet_raw_data_base"
+
+export nnUNet_preprocessed="/data/saumgupta/miccai/dataset/grandchallenge-mnm/OpenDataset/nnunet/nnUNet_preprocessed"
+
+export RESULTS_FOLDER="/data/saumgupta/miccai/dataset/grandchallenge-mnm/OpenDataset/nnunet/nnUNet_results"
+
+== segTHOR
+export nnUNet_raw_data_base="/data/saumgupta/miccai/dataset/segthor/nnunet/nnUNet_raw_data_base"
+
+export nnUNet_preprocessed="/data/saumgupta/miccai/dataset/segthor/nnunet/nnUNet_preprocessed"
+
+export RESULTS_FOLDER="/data/saumgupta/miccai/dataset/segthor/nnunet/nnUNet_results"
+
+
+== for airways:
+
+export nnUNet_preprocessed="/data/saumgupta/miccai/dataset/crowdairway/data/nnunet/nnUNet_preprocessed"
+
+export nnUNet_raw_data_base="/data/saumgupta/miccai/dataset/crowdairway/data/nnunet/nnUNet_raw_data_base"
+
+export RESULTS_FOLDER="/data/saumgupta/miccai/dataset/crowdairway/data/nnunet/nnUNet_results"
+
+== for IVUS:
+
+export nnUNet_raw_data_base="/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/nnUNet_raw_data_base"
+
+export nnUNet_preprocessed="/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/nnUNet_preprocessed"
+
+export RESULTS_FOLDER="/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/nnUNet_results"
+
+== for Abdomen
+
+export nnUNet_raw_data_base="/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/nnUNet_raw_data_base/"
+
+export nnUNet_preprocessed="/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/nnUNet_preprocessed"
+
+export RESULTS_FOLDER="/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/nnUNet_results"
+
+== for Aorta
+
+export RESULTS_FOLDER="/data/saumgupta/miccai/dataset/nnunet-aorta/nnUNet_results"
+
+OR 
+
+export RESULTS_FOLDER="/home/saumya/aorta-segmentation/baseline/nnunet/data/data-format-for-all/nnUNet_results"
+
+export nnUNet_raw_data_base="/home/saumya/aorta-segmentation/baseline/nnunet/data/data-format-for-all/nnUNet_raw_data_base"
+
+export nnUNet_preprocessed="/home/saumya/aorta-segmentation/baseline/nnunet/data/data-format-for-all/nnUNet_preprocessed"
+
+CUDA_VISIBLE_DEVICES=0 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_TopolossCE_6conn Task500_Aorta 0 --npz
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_TopolossCE_6conn Task500_Aorta 1 --npz
+
+CUDA_VISIBLE_DEVICES=5 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_NonAdj Task500_Aorta 0 --npz
+
+CUDA_VISIBLE_DEVICES=0 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_NonAdj Task500_Aorta 1 --npz
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_NonAdj Task500_Aorta 2 --npz
+
+========= train
+CUDA_VISIBLE_DEVICES=7 nnUNet_train 3d_fullres nnUNetTrainerV2 Task600_Cardiac 0 --npz &> 3d-fold0.out
+
+CUDA_VISIBLE_DEVICES=6 nnUNet_train 3d_fullres nnUNetTrainerV2 Task600_Cardiac 1 --npz &> 3d-fold1.out
+
+CUDA_VISIBLE_DEVICES=5 nnUNet_train 3d_fullres nnUNetTrainerV2 Task600_Cardiac 2 --npz &> 3d-fold2.out
+
+CUDA_VISIBLE_DEVICES=4 nnUNet_train 3d_fullres nnUNetTrainerV2 Task600_Cardiac 3 --npz &> 3d-fold3.out
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_train 3d_fullres nnUNetTrainerV2 Task600_Cardiac 4 --npz &> 3d-fold4.out
+
+== for airways:
+CUDA_VISIBLE_DEVICES=2 nnUNet_train 2d nnUNetTrainerV2 Task700_Airway 0 --npz
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_train 3d_fullres nnUNetTrainerV2 Task700_Airway 0 --npz
+
+(after placing checkpoint to restore in respective folder)
+CUDA_VISIBLE_DEVICES=0 nnUNet_train -c 2d nnUNetTrainerV2_2D_Nepochs_TopolossCE Task700_Airway 0 --npz
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_train -c 2d nnUNetTrainerV2_2D_Nepochs_TopolossDICE Task700_Airway 0 --npz
+
+== for IVUS:
+CUDA_VISIBLE_DEVICES=2 nnUNet_train 2d nnUNetTrainerV2 Task800_IVUS 0 --npz
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_train 2d nnUNetTrainerV2 Task800_IVUS 1 --npz
+
+CUDA_VISIBLE_DEVICES=4 nnUNet_train 2d nnUNetTrainerV2 Task800_IVUS 2 --npz
+
+CUDA_VISIBLE_DEVICES=5 nnUNet_train 2d nnUNetTrainerV2 Task800_IVUS 3 --npz
+
+CUDA_VISIBLE_DEVICES=6 nnUNet_train 2d nnUNetTrainerV2 Task800_IVUS 4 --npz
+
+(after placing checkpoint to restore in respective folder)
+CUDA_VISIBLE_DEVICES=2 nnUNet_train -c 2d nnUNetTrainerV2_2D_Nepochs_TopolossCE Task800_IVUS 0 --npz
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_train -c 2d nnUNetTrainerV2_2D_Nepochs_TopolossDICE Task800_IVUS 0 --npz
+
+CUDA_VISIBLE_DEVICES=4 nnUNet_train -c 2d nnUNetTrainerV2_2D_Nepochs_TopolossCE Task800_IVUS 1 --npz
+
+CUDA_VISIBLE_DEVICES=5 nnUNet_train -c 2d nnUNetTrainerV2_2D_Nepochs_TopolossDICE Task800_IVUS 1 --npz
+
+CUDA_VISIBLE_DEVICES=6 nnUNet_train -c 2d nnUNetTrainerV2_2D_Nepochs_TopolossCE Task800_IVUS 2 --npz
+
+CUDA_VISIBLE_DEVICES=7 nnUNet_train -c 2d nnUNetTrainerV2_2D_Nepochs_TopolossDICE Task800_IVUS 2 --npz
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_train 2d nnUNetTrainerV2_2D_Nepochs_TopolossNaiveLoop_profiling Task800_IVUS 0 --npz
+
+== SegTHOR
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_train 3d_fullres nnUNetTrainerV2 Task950_THOR 0 --npz
+
+CUDA_VISIBLE_DEVICES=2 nnUNet_train 3d_fullres nnUNetTrainerV2 Task950_THOR 1 --npz
+
+CUDA_VISIBLE_DEVICES=4 nnUNet_train 3d_fullres nnUNetTrainerV2 Task950_THOR 2 --npz
+
+CUDA_VISIBLE_DEVICES=5 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE Task950_THOR 0 --npz
+
+CUDA_VISIBLE_DEVICES=6 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE Task950_THOR 1 --npz
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE Task950_THOR 2 --npz
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE_6conn Task950_THOR 0 --npz
+
+CUDA_VISIBLE_DEVICES=4 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE_6conn Task950_THOR 1 --npz
+
+CUDA_VISIBLE_DEVICES=2 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_NonAdj Task950_THOR 1 --npz
+
+== Abdomen
+
+CUDA_VISIBLE_DEVICES=6 nnUNet_train 2d nnUNetTrainerV2 Task900_ABDOMEN 0 --npz
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_train 2d nnUNetTrainerV2 Task900_ABDOMEN 1 --npz
+
+CUDA_VISIBLE_DEVICES=2 nnUNet_train 2d nnUNetTrainerV2 Task900_ABDOMEN 2 --npz
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_train 3d_fullres nnUNetTrainerV2 Task900_ABDOMEN 0 --npz
+
+CUDA_VISIBLE_DEVICES=4 nnUNet_train 3d_fullres nnUNetTrainerV2 Task900_ABDOMEN 1 --npz
+
+CUDA_VISIBLE_DEVICES=5 nnUNet_train 3d_fullres nnUNetTrainerV2 Task900_ABDOMEN 2 --npz
+
+#with checkpoint restore
+
+CUDA_VISIBLE_DEVICES=6 nnUNet_train -c 2d nnUNetTrainerV2_2D_Nepochs_TopolossExclusionCE Task900_ABDOMEN 0 --npz
+
+CUDA_VISIBLE_DEVICES=7 nnUNet_train -c 2d nnUNetTrainerV2_2D_Nepochs_TopolossExclusionCE Task900_ABDOMEN 1 --npz
+
+CUDA_VISIBLE_DEVICES=0 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE Task900_ABDOMEN 0 --npz
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE Task900_ABDOMEN 1 --npz
+
+CUDA_VISIBLE_DEVICES=2 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE Task900_ABDOMEN 2 --npz
+
+
+scp -P 130 -r saumya@topox.cs.stonybrook.edu:/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/nnUNet_raw_data_base/nnUNet_raw_data/Task900_ABDOMEN/*Tr .
+/home/saumgupta/aorta-isbi2021/data/IVUS/train
+
+
+============ test
+
+CUDA_VISIBLE_DEVICES=0 nnUNet_predict -i '/data/saumgupta/miccai/dataset/grandchallenge-mnm/OpenDataset/nnunet/test-data/inputs' -o '/data/saumgupta/miccai/dataset/grandchallenge-mnm/OpenDataset/nnunet/test-data/nnunet-outputs/fold0' -t Task600_Cardiac -tr nnUNetTrainerV2 -m 3d_fullres -f 0 -chk model_best
+
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_predict -i '/data/saumgupta/miccai/dataset/grandchallenge-mnm/OpenDataset/nnunet/test-data/inputs' -o '/data/saumgupta/miccai/dataset/grandchallenge-mnm/OpenDataset/nnunet/test-data/nnunet-outputs/fold1' -t Task600_Cardiac -tr nnUNetTrainerV2 -m 3d_fullres -f 1 -chk model_best
+
+
+CUDA_VISIBLE_DEVICES=2 nnUNet_predict -i '/data/saumgupta/miccai/dataset/grandchallenge-mnm/OpenDataset/nnunet/test-data/inputs' -o '/data/saumgupta/miccai/dataset/grandchallenge-mnm/OpenDataset/nnunet/test-data/nnunet-outputs/fold2' -t Task600_Cardiac -tr nnUNetTrainerV2 -m 3d_fullres -f 2 -chk model_best
+
+
+CUDA_VISIBLE_DEVICES=0 nnUNet_predict -i '/data/saumgupta/miccai/dataset/grandchallenge-mnm/OpenDataset/nnunet/test-data/inputs' -o '/data/saumgupta/miccai/dataset/grandchallenge-mnm/OpenDataset/nnunet/test-data/nnunet-outputs/fold3' -t Task600_Cardiac -tr nnUNetTrainerV2 -m 3d_fullres -f 3 -chk model_best
+
+== for IVUS
+
+CUDA_VISIBLE_DEVICES=2 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/outputs/2d/fold0' -t Task800_IVUS -tr nnUNetTrainerV2 -m 2d -f 0 -chk model_best
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/outputs/2d/fold1' -t Task800_IVUS -tr nnUNetTrainerV2 -m 2d -f 1 -chk model_best
+
+CUDA_VISIBLE_DEVICES=4 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/outputs/2d/fold2' -t Task800_IVUS -tr nnUNetTrainerV2 -m 2d -f 2 -chk model_best
+
+CUDA_VISIBLE_DEVICES=5 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/outputs/2d/fold3' -t Task800_IVUS -tr nnUNetTrainerV2 -m 2d -f 3 -chk model_best
+
+CUDA_VISIBLE_DEVICES=6 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/outputs/2d/fold4' -t Task800_IVUS -tr nnUNetTrainerV2 -m 2d -f 4 -chk model_best
+
+
+CUDA_VISIBLE_DEVICES=4 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/outputs/2d/topo/fold0' -t Task800_IVUS -tr nnUNetTrainerV2_2D_Nepochs_TopolossCE -m 2d -f 0 -chk model_best
+
+CUDA_VISIBLE_DEVICES=5 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/outputs/2d/topo/fold1' -t Task800_IVUS -tr nnUNetTrainerV2_2D_Nepochs_TopolossDICE -m 2d -f 1 -chk model_best
+
+CUDA_VISIBLE_DEVICES=6 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/outputs/2d/topo/fold3' -t Task800_IVUS -tr nnUNetTrainerV2_2D_Nepochs_TopolossCE -m 2d -f 3 -chk model_best
+
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/results/outputs/2d/crf' -t Task800_IVUS -tr nnUNetTrainerV2_2D_Nepochs_TopolossCRFonlySmooth -m 2d -f 0 -chk model_final_checkpoint
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/results/outputs/2d/dice' -t Task800_IVUS -tr nnUNetTrainerV2_2D_Nepochs_TopolossDICE -m 2d -f 0 -chk model_best
+
+CUDA_VISIBLE_DEVICES=2 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/results/outputs/2d/mse' -t Task800_IVUS -tr nnUNetTrainerV2_2D_Nepochs_TopolossMSE -m 2d -f 0 -chk model_best
+
+CUDA_VISIBLE_DEVICES=2 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/results/outputs/2d/ablation/topo/ce-2' -t Task800_IVUS -tr nnUNetTrainerV2_2D_Nepochs_TopolossCE2 -m 2d -f 0 -chk model_best
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/results/outputs/2d/ablation/topo/ce-3' -t Task800_IVUS -tr nnUNetTrainerV2_2D_Nepochs_TopolossCE3 -m 2d -f 0 -chk model_best
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/results/outputs/2d/ablation/topo/ce-4' -t Task800_IVUS -tr nnUNetTrainerV2_2D_Nepochs_TopolossCE4 -m 2d -f 0 -chk model_best
+
+CUDA_VISIBLE_DEVICES=4 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/results/outputs/2d/ablation/topo/ce-5' -t Task800_IVUS -tr nnUNetTrainerV2_2D_Nepochs_TopolossCE5 -m 2d -f 0 -chk model_best
+
+CUDA_VISIBLE_DEVICES=4 nnUNet_predict --save_npz -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/results/screenshot-likelihoodmap' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/results/screenshot-likelihoodmap' -t Task800_IVUS -tr nnUNetTrainerV2 -m 2d -f 4 -chk model_best
+
+
+===
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/2d-nnunet/fold0' -t Task900_ABDOMEN -tr nnUNetTrainerV2 -m 2d -f 0 -chk model_best
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/2d-nnunet/fold1' -t Task900_ABDOMEN -tr nnUNetTrainerV2 -m 2d -f 1 -chk model_best
+
+CUDA_VISIBLE_DEVICES=2 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/2d-nnunet/fold2' -t Task900_ABDOMEN -tr nnUNetTrainerV2 -m 2d -f 2 -chk model_best
+
+CUDA_VISIBLE_DEVICES=5 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/2d-topo/fold0' -t Task900_ABDOMEN -tr nnUNetTrainerV2_2D_Nepochs_TopolossExclusionCE -m 2d -f 0 -chk model_best
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/2d-topo/fold1' -t Task900_ABDOMEN -tr nnUNetTrainerV2_2D_Nepochs_TopolossExclusionCE -m 2d -f 1 -chk model_best
+
+CUDA_VISIBLE_DEVICES=6 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/3d-nnunet/fold0' -t Task900_ABDOMEN -tr nnUNetTrainerV2 -m 3d_fullres -f 0 -chk model_best
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/3d-nnunet/fold1' -t Task900_ABDOMEN -tr nnUNetTrainerV2 -m 3d_fullres -f 1 -chk model_best
+
+CUDA_VISIBLE_DEVICES=2 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/3d-nnunet/fold2' -t Task900_ABDOMEN -tr nnUNetTrainerV2 -m 3d_fullres -f 2 -chk model_best
+
+CUDA_VISIBLE_DEVICES=5 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/3d-topo/fold0' -t Task900_ABDOMEN -tr nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE -m 3d_fullres -f 0 -chk model_best
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/3d-topo/fold1' -t Task900_ABDOMEN -tr nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE -m 3d_fullres -f 1 -chk model_best
+
+CUDA_VISIBLE_DEVICES=4 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/3d-topo/fold2' -t Task900_ABDOMEN -tr nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE -m 3d_fullres -f 2 -chk model_best
+
+== for segthor
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_predict -i '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/outputs/3d-nnunet/fold0' -t Task950_THOR -tr nnUNetTrainerV2 -m 3d_fullres -f 0 -chk model_best
+
+CUDA_VISIBLE_DEVICES=2 nnUNet_predict -i '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/outputs/3d-nnunet/fold1' -t Task950_THOR -tr nnUNetTrainerV2 -m 3d_fullres -f 1 -chk model_best
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_predict -i '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/outputs/3d-nnunet/fold2' -t Task950_THOR -tr nnUNetTrainerV2 -m 3d_fullres -f 2 -chk model_best
+
+CUDA_VISIBLE_DEVICES=4 nnUNet_predict -i '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/outputs/3d-topo/fold0' -t Task950_THOR -tr nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE -m 3d_fullres -f 0 -chk model_best
+
+CUDA_VISIBLE_DEVICES=6 nnUNet_predict -i '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/outputs/3d-topo/fold1' -t Task950_THOR -tr nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE -m 3d_fullres -f 1 -chk model_best
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_predict -i '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/outputs/3d-topo/fold2' -t Task950_THOR -tr nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE -m 3d_fullres -f 2 -chk model_best
+
+
+CUDA_VISIBLE_DEVICES=2 nnUNet_predict -i '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/outputs/3d-topocrf/fold0' -t Task950_THOR -tr nnUNetTrainerV2_3D_Nepochs_TopolossCRFonlySmooth -m 3d_fullres -f 0 -chk model_best
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_predict -i '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/outputs/3d-topocrf/fold1' -t Task950_THOR -tr nnUNetTrainerV2_3D_Nepochs_TopolossCRFonlySmooth -m 3d_fullres -f 1 -chk model_best
+
+CUDA_VISIBLE_DEVICES=4 nnUNet_predict -i '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/segthor/nnunet/test-data/outputs/3d-topocrf/fold2' -t Task950_THOR -tr nnUNetTrainerV2_3D_Nepochs_TopolossCRFonlySmooth -m 3d_fullres -f 2 -chk model_best
+
+== for Aorta
+#train
+CUDA_VISIBLE_DEVICES=1 nnUNet_predict -i '/data/saumgupta/miccai/dataset/nnunet-aorta/input/fold0' -o '/data/saumgupta/miccai/dataset/nnunet-aorta/outputs/3d-ce-crf' -t Task500_Aorta -tr nnUNetTrainerV2_3D_Nepochs_TopolossCRFonlySmooth -m 3d_fullres -f 0 -chk model_latest
+
+CUDA_VISIBLE_DEVICES=2 nnUNet_predict -i '/data/saumgupta/miccai/dataset/nnunet-aorta/input/fold3' -o '/data/saumgupta/miccai/dataset/nnunet-aorta/outputs/3d-ce-crf' -t Task500_Aorta -tr nnUNetTrainerV2_3D_Nepochs_TopolossCRFonlySmooth -m 3d_fullres -f 3 -chk model_latest
+
+
+== for IVUS CRF only smooth, misc
+
+CUDA_VISIBLE_DEVICES=0 nnUNet_train -c 2d nnUNetTrainerV2_2D_Nepochs_TopolossCRFonlySmooth Task800_IVUS 0 --npz
+
+CUDA_VISIBLE_DEVICES=0 nnUNet_train -c 2d nnUNetTrainerV2_2D_Nepochs_TopolossCRFonlySmooth Task800_IVUS 1 --npz
+
+CUDA_VISIBLE_DEVICES=2 nnUNet_train -c 2d nnUNetTrainerV2_2D_Nepochs_TopolossCRFonlySmooth Task800_IVUS 2 --npz
+
+CUDA_VISIBLE_DEVICES=2 nnUNet_train -c 2d nnUNetTrainerV2_2D_Nepochs_TopolossCRFonlySmooth Task800_IVUS 3 --npz
+
+CUDA_VISIBLE_DEVICES=0 nnUNet_train -c 2d nnUNetTrainerV2_2D_Nepochs_TopolossCE_4conn Task800_IVUS 0 --npz
+
+CUDA_VISIBLE_DEVICES=5 nnUNet_train -c 2d nnUNetTrainerV2_2D_Nepochs_TopolossCE_4conn Task800_IVUS 1 --npz
+
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_train -c 2d nnUNetTrainerV2_2D_Nepochs_NonAdj Task800_IVUS 0 --npz
+
+
+#test
+CUDA_VISIBLE_DEVICES=1 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/results/outputs/2d/midl/fold0' -t Task800_IVUS -tr nnUNetTrainerV2_2D_Nepochs_TopolossCRFonlySmooth -m 2d -f 0 -chk model_latest
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/results/outputs/2d/midl/fold1' -t Task800_IVUS -tr nnUNetTrainerV2_2D_Nepochs_TopolossCRFonlySmooth -m 2d -f 1 -chk model_latest
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/results/outputs/2d/midl/fold2' -t Task800_IVUS -tr nnUNetTrainerV2_2D_Nepochs_TopolossCRFonlySmooth -m 2d -f 2 -chk model_latest
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/results/outputs/2d/midl/fold3' -t Task800_IVUS -tr nnUNetTrainerV2_2D_Nepochs_TopolossCRFonlySmooth -m 2d -f 0 -chk model_best
+
+CUDA_VISIBLE_DEVICES=6 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/results/outputs/2d/4-conn/fold0' -t Task800_IVUS -tr nnUNetTrainerV2_2D_Nepochs_TopolossCE_4conn -m 2d -f 0 -chk model_final_checkpoint
+
+CUDA_VISIBLE_DEVICES=7 nnUNet_predict -i '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/IVUS/Training_Set/nnunet/test-data/results/outputs/2d/4-conn/fold1' -t Task800_IVUS -tr nnUNetTrainerV2_2D_Nepochs_TopolossCE_4conn -m 2d -f 1 -chk model_latest
+
+
+== for Abdomen crf only smooth
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_TopolossCRFonlySmooth Task900_ABDOMEN 0 --npz
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_TopolossCRFonlySmooth Task900_ABDOMEN 1 --npz
+
+CUDA_VISIBLE_DEVICES=4 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_TopolossCRFonlySmooth Task900_ABDOMEN 2 --npz
+
+
+== for Abdomen, misc
+#train
+CUDA_VISIBLE_DEVICES=5 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE1 Task900_ABDOMEN 0 --npz
+
+CUDA_VISIBLE_DEVICES=6 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE2 Task900_ABDOMEN 0 --npz
+
+CUDA_VISIBLE_DEVICES=7 nnUNet_train -c 3d_fullres nnUNetTrainerV2_3D_Nepochs_TopolossExclusionDICE Task900_ABDOMEN 0 --npz
+
+#test 
+CUDA_VISIBLE_DEVICES=1 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/midl/fold0' -t Task900_ABDOMEN -tr nnUNetTrainerV2_3D_Nepochs_TopolossCRFonlySmooth -m 3d_fullres -f 0 -chk model_latest
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/midl/fold1' -t Task900_ABDOMEN -tr nnUNetTrainerV2_3D_Nepochs_TopolossCRFonlySmooth -m 3d_fullres -f 1 -chk model_latest
+
+CUDA_VISIBLE_DEVICES=4 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/midl/fold2' -t Task900_ABDOMEN -tr nnUNetTrainerV2_3D_Nepochs_TopolossCRFonlySmooth -m 3d_fullres -f 2 -chk model_latest
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/3d-topo-ce1/fold0' -t Task900_ABDOMEN -tr nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE1 -m 3d_fullres -f 0 -chk model_latest
+
+CUDA_VISIBLE_DEVICES=3 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/3d-topo-ce2/fold0' -t Task900_ABDOMEN -tr nnUNetTrainerV2_3D_Nepochs_TopolossExclusionCE2 -m 3d_fullres -f 0 -chk model_latest
+
+CUDA_VISIBLE_DEVICES=4 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/3d-topo-dice/fold0' -t Task900_ABDOMEN -tr nnUNetTrainerV2_3D_Nepochs_TopolossExclusionDICE -m 3d_fullres -f 0 -chk model_latest
+
+CUDA_VISIBLE_DEVICES=1 nnUNet_predict -i '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/input' -o '/data/saumgupta/miccai/dataset/multi-organ/data/nnunet/test-data/outputs/3d-topo-mse/fold0' -t Task900_ABDOMEN -tr nnUNetTrainerV2_3D_Nepochs_TopolossExclusionMSE -m 3d_fullres -f 0 -chk model_latest
+
+
+=====
+
